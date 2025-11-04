@@ -1,0 +1,56 @@
+{if:{argslen}|<=|4|then:{code:.t {tagname} <powers> <duration> <?notrim> <file_format> <...code>}|else:{set:s|{unix}}
+{set:string|{substring:{args}|{indexof:{arg:4}|{args}}}}
+
+{set:code|
+load {iv}
+load https://cdn.discordapp.com/attachments/1124758334805909509/1381053326644482099/resized.mp4?ex=68631ea3&is=6861cd23&hm=ecb1b0ffacc4d52faea41649358b9e96b72149e515adfadac3055925e33a3f52&
+
+vidlen=$(ffprobe -i $FILE_1 -show_entries format=duration -v quiet -of csv="p=0")
+dur=$(awk -v vidlen="$vidlen" 'BEGIN\u007b printf "%.8f", {arg:1}\u007d')
+
+mkdir ./displacemaps
+curl -s "https://leopard.hosting.pecon.us/dl/nukho/Project_Name_4.mov" -o "./displacemaps/tvsimulator.mov"
+ffmpeg -i $FILE_2 -vf scale=8:8,setsar=1:1,"geq=r=128:g=128:b=128",fps=1 -pix_fmt yuv420p -an a.mp4
+
+ffmpeg -f lavfi -i "nullsrc=s=8x8,geq=r=128:g=128:b=128" b.png
+for a in $(seq -180 1 180); do
+    magick hald:4 -modulate 100,100,%[fx:$a/1.8+100] hslhue_$a.ppm
+  done
+
+ffmpeg -i "https://leopard.hosting.pecon.us/dl/qzjbb/hue_0to360.mkv" -c:v png -movflags +faststart hslhue_0to360.mkv
+ffmpeg -i "https://leopard.hosting.pecon.us/dl/ktjhh/hue_0to-360.mkv" -c:v png -movflags +faststart hslhue_0to-360.mkv
+ffmpeg -hide_banner -y -stream_loop 1 -i $FILE_1 -c:v mpeg4 -q:v 1 -c:a flac -t $dur -movflags +faststart 0.mp4
+
+extension={if:{arg:3}|=|default|then:$(basename $\u007bFILE_1##*.\u007d)|else:'{arg:3}'}
+sr=$(ffprobe -v error -select_streams a:0 -show_entries stream=sample_rate -of default=nokey=1:noprint_wrappers=1 0.mp4)
+fr=$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of default=nokey=1:noprint_wrappers=1 0.mp4)
+d=$(ffprobe -i 0.mp4 -show_entries format=duration -v quiet -of csv="p=0")
+w=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=nw=1:nk=1 0.mp4)
+h=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=nw=1:nk=1 0.mp4)
+fc=$(ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of default=nokey=1:noprint_wrappers=1 0.mp4)
+e=$(ffprobe -i hslhue_0to360.mkv -show_entries format=duration -v quiet -of csv="p=0")
+
+if [ "{arg:2}" = "true" ]; then
+   ffmpeg -hide_banner -y -i "0.mp4" {get:string} -movflags +faststart 1.ts
+   for i in $(seq 1 1 {arg:0}); do
+      ffmpeg -hide_banner -y -i "$i.ts" {get:string} $((i+1)).ts -movflags +faststart
+   done
+else
+   ffmpeg -hide_banner -y -stream_loop 1 -i "0.mp4" {get:string} -t $dur -movflags +faststart 1.ts
+   for i in $(seq 1 1 {arg:0}); do
+      ffmpeg -hide_banner -y -stream_loop 1 -i "$i.ts" {get:string} -t $dur $((i+1)).ts -movflags +faststart
+   done
+fi
+for i in $(seq 1 1 {arg:0}); do
+   echo "file '$i.ts'"
+done >> concat.txt
+ffmpeg -f concat -safe 0 -i "concat.txt" {if:{arg:3}|=|mkv|then:-c:a pcm_s16le|else:{if:{arg:3}|=|mxf|then:-c:v mpeg2video -qscale 1 -qmin 1 -c:a pcm_s16le -ar 48000|else:{if:{arg:3}|=|mov|then:-c:v libx264 -q:v 1 -crf 23 -preset slow -q:a 5|else:{if:{arg:3}|=|mp4|then:-c:v libx264 -q:v 1 -crf 23 -preset slow -c:a flac}}}} -pix_fmt yuv420p -maxrate 1024K -bufsize 1M -movflags +faststart ./output/ihtx_custom.$extension
+rm -f *.ts concat.txt}
+
+⚠️ Warning: Make sure you use `.t sync+` afterwards to make sure the video is synced to the audio
+credits to luca moraru
+{sh:{js:console.log(`{get:code}`)}}
+{js:let unix = {unix}
+let start = discord.variables.s
+let diff = (unix-start)/1000
+console.log(JSON.stringify({"embeds":[{"color":0x646464,"title":`Exec time:`,"description":`${diff.toFixed(3)} seconds`,"type":"rich"}]}))}}
